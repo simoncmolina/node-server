@@ -1,58 +1,110 @@
 const readlineSync = require('readline');
-const readline = require('readline-sync');
-const cmd = readlineSync.createInterface(process.stdin,process.stdout);
-console.log('::: TASKS LIST :::');
-var options = ['Add','Complete','Show'];
-var index = readline.keyInSelect(options, 'Choose an option: ');
+const cmd = readlineSync.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
 const taskList = [];
-if(index === 1){
-    console.log('Entrando a Añadir tarea...')
-    let indicator = readline.question('Enter the task indicator: ');
-    let description = readline.question('Enter the task description: ');
-    addTask(indicator, description);
-    cmd.prompt();
-        
-    
-} else if(index === 2){
-    var indicator = readline.question('Enter the task indicator: ');
-    Completed(indicator);
-    cmd.prompt();
-    
-} else if(index === 3) {
-    showTasks();
-    cmd.prompt();
-}
-
-function addTask(indicator, description) {
-    const task = {
-        Ind : indicator,
-        Desc : description,
-        Status : 'Pending'
-    };
-    taskList.push(task);
-    console.log('Task succesfully added.');
-}
-
-function Completed(indicator){
-    const task = taskList.find(t => t.indicator === indicator);
-    if(task) {
-        task.Status = 'Completed';
-        console.log('Task completed. ');
-    } else {
-        console.log('Task is not founded. ');
-    }
-}
-
-function showTasks(){
+function showTasks() {
     if(taskList.length === 0){
-        console.log("Tasks List empty.");
+        console.log('Not tasks to show.');
     } else {
-        taskList.forEach(t => {
-            console.log(`Indicador: ${t.Ind}`);
-            console.log(`Description: ${t.Desc}`);
-            console.log(`Status: ${t.Status}`);
-            console.log("....................");
+        console.log('Tasks:');
+        taskList.forEach((task, index) => {
+            console.log(`${index + 1}. [${task.Completed ? 'X' : ' '}] ${task.text}`);
         });
     }
 }
+function createTask(text) {
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            const newTask = { text, Completed: false};
+            taskList.push(newTask);
+            resolve(newTask);
+        }, 3000);
+    })
+}
+function completeTask(index) {
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            if (index >= 0 && index < taskList.length) {
+                taskList[index].Completed = true;
+                resolve(taskList[index]);
+            } else {
+                reject('Invalid Index');
+            }
+        }, 3000);
+    });
+}
+function deleteTask(index) {
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            if (index >= 0 && index < taskList.length){
+                const deletedTask = taskList.splice(index, 1)[0];
+                resolve(deletedTask);
+            } else {
+                reject('Invalid index');
+            }
+        }, 3000);
+    });
+}
+function start() {
+    cmd.question('¿What do you want to do? (create/delete/complete/show/exit):', async (action) => {
+        switch (action) {
+            case 'create':
+                cmd.question('Write task that you want to create: ', async (text) => {
+                    try {
+                        const newTask = await createTask(text);
+                        console.log(`Task created: ${newTask.text}`);
+                    } catch (error) {
+                        console.error(error);
+                    }
+                    start();
+                });
+                break;
+            
+                case 'delete':
+                    showTasks();
+                    cmd.question('Write the number task that you want to delete: ', async (index) => {
+                        try {
+                            const deletedTask = await deleteTask(index - 1);
+                            console.log(`Task deleted: ${deletedTask.text}`);
+                        } catch (error) {
+                            console.error(error);
+                        }
+                        start();
+                    });
+                    break;  
 
+                    case 'complete':
+                        showTasks();
+                        cmd.question('Write number task that you want to complete ', async (index) => {
+                            try{
+                                const completedTask = await completeTask(index - 1);
+                                console.log(`Task completed: ${completedTask.text}`);
+                            } catch (error) {
+                                console.error(error);
+                            }
+                            start();
+                        });
+                        break;
+
+                    case 'show':
+                        showTasks();
+                        start();
+                        break;
+
+                    case 'exit':
+                        cmd.close();
+                        break;
+
+                    default:
+                        console.log('Invalid command');
+                        start();
+                        break;
+                }
+        });
+    }
+
+    start();
+    
+    
